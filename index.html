@@ -762,13 +762,16 @@ function updateUI(ms) {
   $display.textContent = txt;
   const ratio = totalMs > 0 ? ms / totalMs : 0;
   $ring.style.strokeDashoffset = CIRC * (1 - ratio);
+  
   if (pipWin && !pipWin.closed) {
     const pt = pipWin.document.getElementById('pt');
     const ps = pipWin.document.getElementById('ps');
     const pr = pipWin.document.getElementById('pr');
+    
     if (pt) pt.textContent = txt;
     if (ps) ps.textContent = $label.textContent;
-    if (pr) pr.style.strokeDashoffset = (2 * Math.PI * 115 * (1 - ratio)).toFixed(2);
+    // PIP의 고리 반지름도 본 화면과 같은 108(CIRC)로 변경하여 동기화
+    if (pr) pr.style.strokeDashoffset = (CIRC * (1 - ratio)).toFixed(2);
   }
 }
 
@@ -787,10 +790,14 @@ function finish() {
   $label.textContent   = '종료';
   $btnMain.textContent = '▶';
   $ring.classList.add('done');
+  
   if (pipWin && !pipWin.closed) {
     const pr = pipWin.document.getElementById('pr');
+    const ps = pipWin.document.getElementById('ps');
     if (pr) pr.style.stroke = '#ff4d4d';
+    if (ps) ps.textContent = '종료'; // 텍스트도 함께 변경
   }
+  
   localStorage.removeItem('te');
   localStorage.removeItem('tt');
   // 알람: 음악 있으면 처음부터 재생, 없으면 비프음
@@ -951,40 +958,44 @@ async function togglePiP() {
   }
   $btnPip.textContent = '⧉ 플로팅 닫기';
 
-  const R_PIP   = 115;
-  const C_PIP   = (2 * Math.PI * R_PIP).toFixed(2);
+  // 기존 115였던 반지름을 메인 화면과 동일하게 맞춤
   const ratio   = totalMs > 0 ? remainMs / totalMs : 0;
-  const offset  = (2 * Math.PI * R_PIP * (1 - ratio)).toFixed(2);
+  const offset  = (CIRC * (1 - ratio)).toFixed(2);
   const { r: ar, g: ag, b: ab } = colors['accent'];
   const accentRgb = `rgb(${ar},${ag},${ab})`;
+  const accentGlo = `rgba(${ar},${ag},${ab},0.13)`; // 메인 화면의 빛 번짐(glow) 효과 추가
 
   const d = pipWin.document;
   d.body.style.cssText = [
     'margin:0', 'background:#0b0b12',
-    'overflow:hidden', 'position:relative',
+    'overflow:hidden', 'display:flex',
+    'align-items:center', 'justify-content:center',
     'width:100vw', 'height:100vh',
-    "font-family:'Courier New',system-ui,sans-serif",
+    "user-select:none"
   ].join(';');
 
+  // SVG 내부에 텍스트까지 통합하여 창 크기에 맞춰 자동 스케일링되도록 렌더링
   d.body.innerHTML = `
-    <svg style="transform:rotate(-90deg);position:absolute;top:0;left:0;width:100%;height:100%"
-      viewBox="0 0 260 260" preserveAspectRatio="xMidYMid meet">
-      <circle cx="130" cy="130" r="${R_PIP}" fill="none" stroke="#1d1d2c" stroke-width="10"/>
-      <circle id="pr" cx="130" cy="130" r="${R_PIP}" fill="none"
-        stroke="${accentRgb}" stroke-width="10" stroke-linecap="round"
-        stroke-dasharray="${C_PIP}" stroke-dashoffset="${offset}"/>
-    </svg>
-    <div style="position:absolute;inset:0;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:6px">
-      <div id="pt" style="font-size:3.2rem;font-weight:300;color:#e8e4d9;
-        letter-spacing:0.04em;font-variant-numeric:tabular-nums;line-height:1">
+    <svg style="width:90vmin; height:90vmin; filter:drop-shadow(0 0 18px ${accentGlo});"
+      viewBox="0 0 256 256" preserveAspectRatio="xMidYMid meet">
+      <g transform="rotate(-90 128 128)">
+        <circle cx="128" cy="128" r="108" fill="none" stroke="#1d1d2c" stroke-width="10"/>
+        <circle id="pr" cx="128" cy="128" r="108" fill="none"
+          stroke="${running && remainMs <= 0 ? '#ff4d4d' : accentRgb}"
+          stroke-width="10" stroke-linecap="round"
+          stroke-dasharray="${CIRC.toFixed(2)}" stroke-dashoffset="${offset}"
+          style="transition: stroke-dashoffset 0.38s linear, stroke 0.4s ease;"/>
+      </g>
+      <text id="pt" x="128" y="136" font-size="52" font-family="'Courier New', 'SF Mono', monospace"
+        font-weight="300" fill="#e8e4d9" text-anchor="middle" dominant-baseline="middle"
+        letter-spacing="0.04em" style="font-variant-numeric:tabular-nums;">
         ${$display.textContent}
-      </div>
-      <div id="ps" style="font-size:0.65rem;letter-spacing:0.22em;
-        text-transform:uppercase;color:#56536a">
+      </text>
+      <text id="ps" x="128" y="176" font-size="11" font-family="system-ui, -apple-system, sans-serif"
+        fill="#56536a" text-anchor="middle" letter-spacing="0.22em" text-transform="uppercase">
         ${$label.textContent}
-      </div>
-    </div>`;
+      </text>
+    </svg>`;
 
   pipWin.addEventListener('pagehide', () => {
     pipWin = null;

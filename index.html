@@ -610,14 +610,12 @@
   <span class="status-msg" id="swMsg"></span>
 </div>
 
-<!-- Alarm -->
 <div class="alarm" id="alarm">
   <div class="alarm-icon">⏰</div>
   <div class="alarm-msg">타이머 종료</div>
   <button class="btn-dismiss" onclick="dismissAlarm()">확인</button>
 </div>
 
-<!-- Settings overlay -->
 <div class="settings-ov" id="settingsOv" onclick="if(event.target===this)closeSettings()">
   <div class="settings-panel">
     <div class="settings-hdr">
@@ -626,14 +624,12 @@
     </div>
     <div class="settings-body">
 
-      <!-- 색상 -->
       <div>
         <div class="sect-label">색상</div>
         <div class="color-section" id="colorSettings"></div>
         <button class="color-reset-btn" onclick="resetColors()" style="margin-top:10px">기본값으로 초기화</button>
       </div>
 
-      <!-- 음악 -->
       <div>
         <div class="sect-label">알람 음악 <span style="font-weight:300;letter-spacing:0.05em;text-transform:none;font-size:0.9em;opacity:0.7">— 없으면 기본 알림음 재생</span></div>
         <div class="music-toolbar">
@@ -761,8 +757,12 @@ function updateUI(ms) {
   const txt = fmt(ms);
   $display.textContent = txt;
   const ratio = totalMs > 0 ? ms / totalMs : 0;
-  $ring.style.strokeDashoffset = CIRC * (1 - ratio);
+  const offset = CIRC * (1 - ratio);
   
+  // 메인 화면 고리 업데이트
+  $ring.style.strokeDashoffset = offset;
+  
+  // PIP 화면 고리 및 텍스트 업데이트
   if (pipWin && !pipWin.closed) {
     const pt = pipWin.document.getElementById('pt');
     const ps = pipWin.document.getElementById('ps');
@@ -770,8 +770,7 @@ function updateUI(ms) {
     
     if (pt) pt.textContent = txt;
     if (ps) ps.textContent = $label.textContent;
-    // PIP의 고리 반지름도 본 화면과 같은 108(CIRC)로 변경하여 동기화
-    if (pr) pr.style.strokeDashoffset = (CIRC * (1 - ratio)).toFixed(2);
+    if (pr) pr.style.strokeDashoffset = offset; // 본 화면과 완벽하게 동일한 값 적용
   }
 }
 
@@ -794,13 +793,12 @@ function finish() {
   if (pipWin && !pipWin.closed) {
     const pr = pipWin.document.getElementById('pr');
     const ps = pipWin.document.getElementById('ps');
-    if (pr) pr.style.stroke = '#ff4d4d';
-    if (ps) ps.textContent = '종료'; // 텍스트도 함께 변경
+    if (pr) pr.style.stroke = 'var(--done, #ff4d4d)';
+    if (ps) ps.textContent = '종료';
   }
   
   localStorage.removeItem('te');
   localStorage.removeItem('tt');
-  // 알람: 음악 있으면 처음부터 재생, 없으면 비프음
   if (playlist.length > 0) {
     playTrack(0);
   } else {
@@ -958,12 +956,12 @@ async function togglePiP() {
   }
   $btnPip.textContent = '⧉ 플로팅 닫기';
 
-  // 기존 115였던 반지름을 메인 화면과 동일하게 맞춤
   const ratio   = totalMs > 0 ? remainMs / totalMs : 0;
-  const offset  = (CIRC * (1 - ratio)).toFixed(2);
+  const offset  = CIRC * (1 - ratio);
+  
   const { r: ar, g: ag, b: ab } = colors['accent'];
   const accentRgb = `rgb(${ar},${ag},${ab})`;
-  const accentGlo = `rgba(${ar},${ag},${ab},0.13)`; // 메인 화면의 빛 번짐(glow) 효과 추가
+  const accentGlo = `rgba(${ar},${ag},${ab},0.13)`;
 
   const d = pipWin.document;
   d.body.style.cssText = [
@@ -974,16 +972,16 @@ async function togglePiP() {
     "user-select:none"
   ].join(';');
 
-  // SVG 내부에 텍스트까지 통합하여 창 크기에 맞춰 자동 스케일링되도록 렌더링
+  // SVG를 100% 크기로 꽉 채우고 viewBox로 내부 요소의 비율을 고정시킵니다.
   d.body.innerHTML = `
-    <svg style="width:90vmin; height:90vmin; filter:drop-shadow(0 0 18px ${accentGlo});"
+    <svg style="width:100%; height:100%; max-width:90vmin; max-height:90vmin; filter:drop-shadow(0 0 18px ${accentGlo});"
       viewBox="0 0 256 256" preserveAspectRatio="xMidYMid meet">
       <g transform="rotate(-90 128 128)">
         <circle cx="128" cy="128" r="108" fill="none" stroke="#1d1d2c" stroke-width="10"/>
         <circle id="pr" cx="128" cy="128" r="108" fill="none"
           stroke="${running && remainMs <= 0 ? '#ff4d4d' : accentRgb}"
           stroke-width="10" stroke-linecap="round"
-          stroke-dasharray="${CIRC.toFixed(2)}" stroke-dashoffset="${offset}"
+          stroke-dasharray="${CIRC}" stroke-dashoffset="${offset}"
           style="transition: stroke-dashoffset 0.38s linear, stroke 0.4s ease;"/>
       </g>
       <text id="pt" x="128" y="136" font-size="52" font-family="'Courier New', 'SF Mono', monospace"
@@ -991,8 +989,8 @@ async function togglePiP() {
         letter-spacing="0.04em" style="font-variant-numeric:tabular-nums;">
         ${$display.textContent}
       </text>
-      <text id="ps" x="128" y="176" font-size="11" font-family="system-ui, -apple-system, sans-serif"
-        fill="#56536a" text-anchor="middle" letter-spacing="0.22em" text-transform="uppercase">
+      <text id="ps" x="128" y="176" font-size="12" font-family="system-ui, -apple-system, sans-serif"
+        fill="#56536a" text-anchor="middle" dominant-baseline="middle" letter-spacing="0.22em" text-transform="uppercase">
         ${$label.textContent}
       </text>
     </svg>`;

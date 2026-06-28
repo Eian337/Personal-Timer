@@ -964,17 +964,20 @@ async function togglePiP() {
   const accentGlo = `rgba(${ar},${ag},${ab},0.13)`;
 
   const d = pipWin.document;
+  
+  // 변경점 1: vmin, vw 대신 100%와 padding을 사용하여 창 크기 계산 버그 우회
   d.body.style.cssText = [
-    'margin:0', 'background:#0b0b12',
+    'margin:0', 'padding:5%', 'box-sizing:border-box',
+    'background:#0b0b12',
     'overflow:hidden', 'display:flex',
     'align-items:center', 'justify-content:center',
-    'width:100vw', 'height:100vh',
+    'width:100%', 'height:100vh',
     "user-select:none"
   ].join(';');
 
-  // SVG를 100% 크기로 꽉 채우고 viewBox로 내부 요소의 비율을 고정시킵니다.
+  // 변경점 2: style 속성 대신 SVG 고유 속성인 width="100%" height="100%"를 직접 부여
   d.body.innerHTML = `
-    <svg style="width:100%; height:100%; max-width:90vmin; max-height:90vmin; filter:drop-shadow(0 0 18px ${accentGlo});"
+    <svg width="100%" height="100%" style="filter:drop-shadow(0 0 18px ${accentGlo});"
       viewBox="0 0 256 256" preserveAspectRatio="xMidYMid meet">
       <g transform="rotate(-90 128 128)">
         <circle cx="128" cy="128" r="108" fill="none" stroke="#1d1d2c" stroke-width="10"/>

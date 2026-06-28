@@ -16,7 +16,7 @@
       --accent-glo: rgba(240,165,0,0.13);
       --text:       #e8e4d9;
       --text-dim:   #56536a;
-      --done:       #3dd68c;
+      --done:       #ff4d4d;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -765,8 +765,10 @@ function updateUI(ms) {
   if (pipWin && !pipWin.closed) {
     const pt = pipWin.document.getElementById('pt');
     const ps = pipWin.document.getElementById('ps');
+    const pr = pipWin.document.getElementById('pr');
     if (pt) pt.textContent = txt;
     if (ps) ps.textContent = $label.textContent;
+    if (pr) pr.style.strokeDashoffset = (2 * Math.PI * 58 * (1 - ratio)).toFixed(2);
   }
 }
 
@@ -785,6 +787,10 @@ function finish() {
   $label.textContent   = '종료';
   $btnMain.textContent = '▶';
   $ring.classList.add('done');
+  if (pipWin && !pipWin.closed) {
+    const pr = pipWin.document.getElementById('pr');
+    if (pr) pr.style.stroke = '#ff4d4d';
+  }
   localStorage.removeItem('te');
   localStorage.removeItem('tt');
   // 알람: 음악 있으면 처음부터 재생, 없으면 비프음
@@ -938,29 +944,50 @@ async function togglePiP() {
     return;
   }
   try {
-    pipWin = await documentPictureInPicture.requestWindow({ width: 230, height: 135 });
+    pipWin = await documentPictureInPicture.requestWindow({ width: 200, height: 210 });
   } catch {
     flash('PiP 창을 열 수 없었어요');
     return;
   }
   $btnPip.textContent = '⧉ 플로팅 닫기';
+
+  const R_PIP   = 58;
+  const C_PIP   = (2 * Math.PI * R_PIP).toFixed(2);
+  const ratio   = totalMs > 0 ? remainMs / totalMs : 0;
+  const offset  = (2 * Math.PI * R_PIP * (1 - ratio)).toFixed(2);
+  const { r: ar, g: ag, b: ab } = colors['accent'];
+  const accentRgb = `rgb(${ar},${ag},${ab})`;
+
   const d = pipWin.document;
   d.body.style.cssText = [
-    'margin:0','background:#0b0b12',
-    'display:flex','flex-direction:column',
-    'align-items:center','justify-content:center',
-    'height:100vh','gap:6px',
+    'margin:0', 'background:#0b0b12',
+    'display:flex', 'flex-direction:column',
+    'align-items:center', 'justify-content:center',
+    'height:100vh',
     "font-family:'Courier New',system-ui,sans-serif",
   ].join(';');
+
   d.body.innerHTML = `
-    <div id="pt" style="font-size:2.7rem;font-weight:300;color:#e8e4d9;
-      letter-spacing:0.04em;font-variant-numeric:tabular-nums;">
-      ${$display.textContent}
-    </div>
-    <div id="ps" style="font-size:0.6rem;letter-spacing:0.22em;
-      text-transform:uppercase;color:#56536a;">
-      ${$label.textContent}
+    <div style="position:relative;width:160px;height:160px">
+      <svg style="transform:rotate(-90deg)" viewBox="0 0 160 160" width="160" height="160">
+        <circle cx="80" cy="80" r="${R_PIP}" fill="none" stroke="#1d1d2c" stroke-width="8"/>
+        <circle id="pr" cx="80" cy="80" r="${R_PIP}" fill="none"
+          stroke="${accentRgb}" stroke-width="8" stroke-linecap="round"
+          stroke-dasharray="${C_PIP}" stroke-dashoffset="${offset}"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:5px">
+        <div id="pt" style="font-size:1.9rem;font-weight:300;color:#e8e4d9;
+          letter-spacing:0.04em;font-variant-numeric:tabular-nums;line-height:1">
+          ${$display.textContent}
+        </div>
+        <div id="ps" style="font-size:0.55rem;letter-spacing:0.22em;
+          text-transform:uppercase;color:#56536a">
+          ${$label.textContent}
+        </div>
+      </div>
     </div>`;
+
   pipWin.addEventListener('pagehide', () => {
     pipWin = null;
     $btnPip.textContent = '⧉ 플로팅';

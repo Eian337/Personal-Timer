@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0b12">
+  <link rel="manifest" href="manifest.json">
+  <title>타이머</title>
+  <style>
+    :root {
+      --bg:         #0b0b12;
+      --surface:    #14141f;
+      --surface2:   #1d1d2c;
+      --accent:     #f0a500;
+      --accent-dim: #a87200;
+      --accent-glo: rgba(240,165,0,0.13);
+      --text:       #e8e4d9;
+      --text-dim:   #56536a;
+      --done:       #3dd68c;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 26px;
+      padding: 24px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .app-title {
+      font-size: 0.65rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    /* ── Ring ─────────────────────────────────── */
+    .ring-wrap {
+      position: relative;
+      width: 256px;
+      height: 256px;
+    }
+
+    .ring-svg {
+      transform: rotate(-90deg);
+      filter: drop-shadow(0 0 18px var(--accent-glo));
+    }
+
+    .ring-track {
+      fill: none;
+      stroke: var(--surface2);
+      stroke-width: 10;
+    }
+
+    .ring-prog {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.38s linear, stroke 0.4s ease;
+    }
+
+    .ring-prog.done { stroke: var(--done); }
+
+    .ring-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .time-display {
+      font-size: 3.4rem;
+      font-weight: 300;
+      font-family: 'Courier New', 'SF Mono', monospace;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .time-status {
+      font-size: 0.65rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    /* ── Inputs ───────────────────────────────── */
+    .inputs { display: flex; align-items: center; gap: 4px; }
+
+    .input-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .input-col label {
+      font-size: 0.58rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .tnum {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 1.55rem;
+      font-family: 'Courier New', monospace;
+      font-weight: 300;
+      text-align: center;
+      width: 66px;
+      padding: 7px 4px;
+      outline: none;
+      transition: border-color 0.18s;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    .tnum::-webkit-inner-spin-button,
+    .tnum::-webkit-outer-spin-button { display: none; }
+    .tnum:focus { border-color: var(--accent); }
+
+    .colon {
+      font-size: 1.55rem;
+      color: var(--text-dim);
+      padding-bottom: 22px;
+      font-family: monospace;
+    }
+
+    /* ── Presets ──────────────────────────────── */
+    .presets {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 310px;
+    }
+
+    .preset {
+      background: transparent;
+      border: 1px solid var(--surface2);
+      border-radius: 4px;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.72rem;
+      padding: 5px 11px;
+      letter-spacing: 0.04em;
+      transition: border-color 0.14s, color 0.14s;
+      font-family: inherit;
+    }
+    .preset:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+    /* ── Controls ─────────────────────────────── */
+    .controls { display: flex; align-items: center; gap: 14px; }
+
+    .btn-circle {
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.14s;
+      font-family: inherit;
+    }
+
+    .btn-main {
+      width: 62px;
+      height: 62px;
+      background: var(--accent);
+      color: #0b0b12;
+      font-size: 1.35rem;
+      box-shadow: 0 0 22px var(--accent-glo);
+    }
+    .btn-main:hover { background: var(--accent-dim); transform: scale(1.07); }
+
+    .btn-sm {
+      width: 42px;
+      height: 42px;
+      background: var(--surface);
+      color: var(--text-dim);
+      border: 1px solid var(--surface2);
+      font-size: 0.85rem;
+    }
+    .btn-sm:hover { border-color: var(--text-dim); color: var(--text); }
+
+    /* ── Footer ───────────────────────────────── */
+    .footer { display: flex; align-items: center; gap: 10px; }
+
+    .btn-text {
+      background: transparent;
+      border: 1px solid var(--surface2);
+      border-radius: 5px;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.72rem;
+      padding: 5px 13px;
+      letter-spacing: 0.04em;
+      transition: border-color 0.14s, color 0.14s;
+      font-family: inherit;
+    }
+    .btn-text:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+    .status-msg {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Alarm overlay ────────────────────────── */
+    .alarm {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(11,11,18,0.9);
+      backdrop-filter: blur(10px);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 999;
+      animation: fade 0.25s ease;
+    }
+    .alarm.active { display: flex; }
+
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+    .alarm-icon {
+      font-size: 3rem;
+      animation: pop 0.75s ease-in-out infinite;
+    }
+    @keyframes pop {
+      0%,100% { transform: scale(1) rotate(-8deg); }
+      50%      { transform: scale(1.18) rotate(8deg); }
+    }
+
+    .alarm-msg {
+      font-size: 1.3rem;
+      font-weight: 300;
+      color: var(--done);
+      letter-spacing: 0.12em;
+    }
+
+    .btn-dismiss {
+      background: transparent;
+      border: 1px solid var(--done);
+      border-radius: 7px;
+      color: var(--done);
+      cursor: pointer;
+      font-size: 0.88rem;
+      padding: 9px 28px;
+      letter-spacing: 0.1em;
+      font-family: inherit;
+      transition: all 0.14s;
+    }
+    .btn-dismiss:hover { background: var(--done); color: #0b0b12; }
+
+    /* ── Settings overlay ─────────────────────── */
+    .settings-ov {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(11,11,18,0.65);
+      backdrop-filter: blur(5px);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .settings-ov.active { display: flex; }
+
+    .settings-panel {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 16px 16px 0 0;
+      width: 100%;
+      max-width: 480px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: slideUp 0.22s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+
+    .settings-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--surface2);
+      flex-shrink: 0;
+    }
+
+    .settings-hdr-title {
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .settings-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 1.3rem;
+      line-height: 1;
+      padding: 0 4px;
+      transition: color 0.14s;
+    }
+    .settings-close:hover { color: var(--text); }
+
+    .settings-body {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .sect-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--surface2);
+    }
+
+    /* ── Color settings ───────────────────────── */
+    .color-section { display: flex; flex-direction: column; gap: 14px; }
+
+    .color-block { display: flex; flex-direction: column; gap: 8px; }
+
+    .color-block-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .color-name {
+      font-size: 0.78rem;
+      color: var(--text);
+    }
+
+    .color-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 5px;
+      border: 1px solid var(--surface2);
+      flex-shrink: 0;
+    }
+
+    .rgb-row { display: flex; align-items: center; gap: 8px; }
+
+    .rgb-lbl {
+      font-size: 0.62rem;
+      font-family: monospace;
+      color: var(--text-dim);
+      width: 12px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .rgb-range {
+      flex: 1;
+      height: 3px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--surface2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    .rgb-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+
+    .rgb-num {
+      background: var(--surface2);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 0.68rem;
+      font-family: monospace;
+      text-align: right;
+      width: 40px;
+      padding: 3px 5px;
+      outline: none;
+      -moz-appearance: textfield;
+      appearance: textfield;
+      transition: border-color 0.14s;
+      flex-shrink: 0;
+    }
+    .rgb-num::-webkit-inner-spin-button,
+    .rgb-num::-webkit-outer-spin-button { display: none; }
+    .rgb-num:focus { border-color: var(--accent); }
+
+    .color-reset-btn {
+      align-self: flex-start;
+      background: transparent;
+      border: 1px solid var(--surface2);
+      border-radius: 4px;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.68rem;
+      padding: 4px 10px;
+      font-family: inherit;
+      transition: all 0.14s;
+    }
+    .color-reset-btn:hover { border-color: var(--text-dim); color: var(--text); }
+
+    /* ── Music section ────────────────────────── */
+    .music-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .music-list { display: flex; flex-direction: column; gap: 4px; }
+
+    .music-empty {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      padding: 6px 0;
+    }
+
+    .music-track {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--surface2);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      transition: border-color 0.14s;
+    }
+    .music-track.active {
+      border-color: rgba(240,165,0,0.35);
+      background: rgba(240,165,0,0.07);
+    }
+
+    .track-num {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      font-family: monospace;
+      min-width: 16px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .track-name {
+      flex: 1;
+      font-size: 0.74rem;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .track-btns { display: flex; gap: 3px; flex-shrink: 0; }
+
+    .track-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.72rem;
+      padding: 3px 6px;
+      border-radius: 3px;
+      transition: color 0.12s, background 0.12s;
+      font-family: inherit;
+    }
+    .track-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .track-btn:disabled { opacity: 0.25; cursor: default; }
+    .track-btn.del:hover { color: #ff5e5e; background: rgba(255,94,94,0.08); }
+
+    /* ── Music player ─────────────────────────── */
+    .music-player {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .music-player.visible { display: flex; }
+
+    .player-btns { display: flex; align-items: center; gap: 10px; }
+
+    .btn-play-sm {
+      width: 46px;
+      height: 46px;
+      font-size: 1rem;
+    }
+
+    .now-playing {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 280px;
+      width: 100%;
+    }
+
+    .seek-bar {
+      width: 100%;
+      height: 3px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--surface);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    .seek-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+<span class="app-title">T I M E R</span>
+
+<div class="ring-wrap">
+  <svg class="ring-svg" viewBox="0 0 256 256" width="256" height="256">
+    <circle class="ring-track" cx="128" cy="128" r="108"/>
+    <circle class="ring-prog"  id="ring"  cx="128" cy="128" r="108"/>
+  </svg>
+  <div class="ring-center">
+    <div class="time-display" id="display">05:00</div>
+    <div class="time-status"  id="label">준비</div>
+  </div>
+</div>
+
+<div class="inputs" id="inputArea">
+  <div class="input-col">
+    <input class="tnum" id="iH" type="number" min="0" max="23" value="0">
+    <label>시간</label>
+  </div>
+  <span class="colon">:</span>
+  <div class="input-col">
+    <input class="tnum" id="iM" type="number" min="0" max="59" value="5">
+    <label>분</label>
+  </div>
+  <span class="colon">:</span>
+  <div class="input-col">
+    <input class="tnum" id="iS" type="number" min="0" max="59" value="0">
+    <label>초</label>
+  </div>
+</div>
+
+<div class="presets">
+  <button class="preset" onclick="setPreset(1)">1분</button>
+  <button class="preset" onclick="setPreset(5)">5분</button>
+  <button class="preset" onclick="setPreset(10)">10분</button>
+  <button class="preset" onclick="setPreset(15)">15분</button>
+  <button class="preset" onclick="setPreset(25)">25분</button>
+  <button class="preset" onclick="setPreset(30)">30분</button>
+  <button class="preset" onclick="setPreset(60)">1시간</button>
+</div>
+
+<div class="controls">
+  <button class="btn-circle btn-sm" onclick="resetTimer()" title="리셋">↺</button>
+  <button class="btn-circle btn-main" id="btnMain" onclick="toggleTimer()">▶</button>
+  <button class="btn-circle btn-sm" onclick="addTime(60)" title="+1분 추가">+1m</button>
+</div>
+
+<div class="footer">
+  <button class="btn-text" id="btnPip" onclick="togglePiP()">⧉ 플로팅</button>
+  <button class="btn-text" onclick="openSettings()">⚙ 설정</button>
+  <span class="status-msg" id="swMsg"></span>
+</div>
+
+<!-- Alarm -->
+<div class="alarm" id="alarm">
+  <div class="alarm-icon">⏰</div>
+  <div class="alarm-msg">타이머 종료</div>
+  <button class="btn-dismiss" onclick="dismissAlarm()">확인</button>
+</div>
+
+<!-- Settings overlay -->
+<div class="settings-ov" id="settingsOv" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-hdr">
+      <span class="settings-hdr-title">설정</span>
+      <button class="settings-close" onclick="closeSettings()">×</button>
+    </div>
+    <div class="settings-body">
+
+      <!-- 색상 -->
+      <div>
+        <div class="sect-label">색상</div>
+        <div class="color-section" id="colorSettings"></div>
+        <button class="color-reset-btn" onclick="resetColors()" style="margin-top:10px">기본값으로 초기화</button>
+      </div>
+
+      <!-- 음악 -->
+      <div>
+        <div class="sect-label">알람 음악 <span style="font-weight:300;letter-spacing:0.05em;text-transform:none;font-size:0.9em;opacity:0.7">— 없으면 기본 알림음 재생</span></div>
+        <div class="music-toolbar">
+          <button class="btn-text" onclick="document.getElementById('mUpload').click()">+ 파일 추가</button>
+          <input type="file" id="mUpload" multiple accept="audio/*" style="display:none">
+          <button class="btn-text" id="btnRepeat" onclick="toggleRepeat()">🔁 반복 꺼짐</button>
+        </div>
+        <div style="height:10px"></div>
+        <div id="musicList" class="music-list"></div>
+        <div style="height:10px"></div>
+        <div id="musicPlayer" class="music-player">
+          <div class="player-btns">
+            <button class="btn-circle btn-sm" onclick="prevTrack()" title="이전">⏮</button>
+            <button class="btn-circle btn-main btn-play-sm" id="btnPlay" onclick="togglePlay()">▶</button>
+            <button class="btn-circle btn-sm" onclick="nextTrack()" title="다음">⏭</button>
+          </div>
+          <div class="now-playing" id="nowPlaying">트랙 없음</div>
+          <input type="range" id="seekBar" class="seek-bar" min="0" max="100" value="0">
+          <div class="time-row">
+            <span id="curTime">0:00</span>
+            <span id="durTime">0:00</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// TIMER
+// ═══════════════════════════════════════════════════════════
+const R    = 108;
+const CIRC = 2 * Math.PI * R; // ≈ 678.58
+
+let totalMs   = 5 * 60 * 1000;
+let remainMs  = totalMs;
+let endTime   = null;
+let running   = false;
+let rafId     = null;
+let alarmCtx  = null;
+let pipWin    = null;
+
+const $ring      = document.getElementById('ring');
+const $display   = document.getElementById('display');
+const $label     = document.getElementById('label');
+const $btnMain   = document.getElementById('btnMain');
+const $btnPip    = document.getElementById('btnPip');
+const $inputArea = document.getElementById('inputArea');
+const $iH        = document.getElementById('iH');
+const $iM        = document.getElementById('iM');
+const $iS        = document.getElementById('iS');
+const $alarm     = document.getElementById('alarm');
+const $swMsg     = document.getElementById('swMsg');
+
+$ring.style.strokeDasharray = CIRC;
+
+// ── Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => flash('오프라인 지원 활성화'))
+    .catch(() => {});
+}
+
+// ── Notification
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+function sendNotif() {
+  if (Notification.permission === 'granted') {
+    new Notification('⏰ 타이머 종료', { body: '설정한 시간이 됐어요.' });
+  }
+}
+
+// ── Alarm sound
+function playAlarm() {
+  const ctx = new AudioContext();
+  alarmCtx = ctx;
+  const notes = [
+    [0.00, 880, 0.3], [0.38, 1047, 0.3], [0.76, 1175, 0.3],
+    [1.30, 880, 0.3], [1.68, 1047, 0.3], [2.06, 1319, 0.55],
+  ];
+  notes.forEach(([t, freq, dur]) => {
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.32, ctx.currentTime + t);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + dur);
+    osc.start(ctx.currentTime + t);
+    osc.stop(ctx.currentTime + t + dur + 0.05);
+  });
+}
+function stopAlarm() {
+  if (alarmCtx) { alarmCtx.close(); alarmCtx = null; }
+}
+
+// ── Helpers
+function fmt(ms) {
+  const s   = Math.max(0, Math.ceil(ms / 1000));
+  const h   = Math.floor(s / 3600);
+  const m   = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const p   = n => String(n).padStart(2, '0');
+  return h > 0 ? `${p(h)}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`;
+}
+
+function flash(msg, dur = 3000) {
+  $swMsg.textContent = msg;
+  setTimeout(() => { if ($swMsg.textContent === msg) $swMsg.textContent = ''; }, dur);
+}
+
+function fromInput() {
+  const h = parseInt($iH.value) || 0;
+  const m = parseInt($iM.value) || 0;
+  const s = parseInt($iS.value) || 0;
+  return (h * 3600 + m * 60 + s) * 1000;
+}
+
+// ── Display
+function updateUI(ms) {
+  const txt = fmt(ms);
+  $display.textContent = txt;
+  const ratio = totalMs > 0 ? ms / totalMs : 0;
+  $ring.style.strokeDashoffset = CIRC * (1 - ratio);
+  if (pipWin && !pipWin.closed) {
+    const pt = pipWin.document.getElementById('pt');
+    const ps = pipWin.document.getElementById('ps');
+    if (pt) pt.textContent = txt;
+    if (ps) ps.textContent = $label.textContent;
+  }
+}
+
+// ── Timer core
+function tick() {
+  if (!running) return;
+  remainMs = Math.max(0, endTime - Date.now());
+  updateUI(remainMs);
+  if (remainMs <= 0) { finish(); return; }
+  rafId = requestAnimationFrame(tick);
+}
+
+function finish() {
+  running = false;
+  cancelAnimationFrame(rafId);
+  $label.textContent   = '종료';
+  $btnMain.textContent = '▶';
+  $ring.classList.add('done');
+  localStorage.removeItem('te');
+  localStorage.removeItem('tt');
+  // 알람: 음악 있으면 처음부터 재생, 없으면 비프음
+  if (playlist.length > 0) {
+    playTrack(0);
+  } else {
+    playAlarm();
+  }
+  sendNotif();
+  $alarm.classList.add('active');
+}
+
+function toggleTimer() {
+  if (running) {
+    running  = false;
+    cancelAnimationFrame(rafId);
+    remainMs = Math.max(0, endTime - Date.now());
+    endTime  = null;
+    $btnMain.textContent    = '▶';
+    $label.textContent      = '일시정지';
+    localStorage.removeItem('te');
+  } else {
+    if (remainMs <= 0) {
+      const t = fromInput();
+      if (t <= 0) return;
+      totalMs  = t;
+      remainMs = t;
+      updateUI(remainMs);
+    }
+    endTime = Date.now() + remainMs;
+    running = true;
+    $btnMain.textContent     = '⏸';
+    $label.textContent       = '진행 중';
+    $inputArea.style.opacity = '0.32';
+    $ring.classList.remove('done');
+    localStorage.setItem('te', endTime);
+    localStorage.setItem('tt', totalMs);
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
+}
+
+function resetTimer() {
+  running = false;
+  cancelAnimationFrame(rafId);
+  endTime = null;
+  stopAlarm();
+  $alarm.classList.remove('active');
+  localStorage.removeItem('te');
+  localStorage.removeItem('tt');
+  const t = fromInput();
+  totalMs  = t > 0 ? t : 5 * 60 * 1000;
+  remainMs = totalMs;
+  $btnMain.textContent     = '▶';
+  $label.textContent       = '준비';
+  $inputArea.style.opacity = '1';
+  $ring.classList.remove('done');
+  updateUI(remainMs);
+}
+
+function addTime(sec) {
+  const add = sec * 1000;
+  totalMs  += add;
+  remainMs += add;
+  if (running && endTime) {
+    endTime += add;
+    localStorage.setItem('te', endTime);
+    localStorage.setItem('tt', totalMs);
+  }
+  updateUI(remainMs);
+}
+
+function dismissAlarm() {
+  stopAlarm();
+  // 알람 음악 정지
+  if (musicPlaying) {
+    aud.pause();
+    aud.currentTime = 0;
+    musicPlaying = false;
+    updatePlayerUI();
+  }
+  $alarm.classList.remove('active');
+}
+
+function setPreset(min) {
+  $iH.value = Math.floor(min / 60);
+  $iM.value = min % 60;
+  $iS.value = 0;
+  if (!running) {
+    totalMs  = min * 60 * 1000;
+    remainMs = totalMs;
+    updateUI(remainMs);
+  }
+}
+
+[$iH, $iM, $iS].forEach(el => {
+  el.addEventListener('input', () => {
+    if (!running) {
+      const t = fromInput();
+      totalMs  = t;
+      remainMs = t;
+      updateUI(t);
+    }
+  });
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && running && endTime) {
+    remainMs = Math.max(0, endTime - Date.now());
+    if (remainMs <= 0) { finish(); return; }
+    updateUI(remainMs);
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
+});
+
+// ── Restore
+(function restore() {
+  const te = localStorage.getItem('te');
+  const tt = localStorage.getItem('tt');
+  if (te && tt) {
+    const rem = parseInt(te) - Date.now();
+    if (rem > 0) {
+      totalMs  = parseInt(tt);
+      remainMs = rem;
+      endTime  = parseInt(te);
+      running  = true;
+      $btnMain.textContent     = '⏸';
+      $label.textContent       = '진행 중';
+      $inputArea.style.opacity = '0.32';
+      updateUI(remainMs);
+      rafId = requestAnimationFrame(tick);
+      return;
+    }
+    localStorage.removeItem('te');
+    localStorage.removeItem('tt');
+  }
+  updateUI(totalMs);
+})();
+
+// ── PiP
+async function togglePiP() {
+  if (!('documentPictureInPicture' in window)) {
+    flash('Chrome 116+ 에서만 지원');
+    return;
+  }
+  if (pipWin && !pipWin.closed) {
+    pipWin.close();
+    pipWin = null;
+    $btnPip.textContent = '⧉ 플로팅';
+    return;
+  }
+  try {
+    pipWin = await documentPictureInPicture.requestWindow({ width: 230, height: 135 });
+  } catch {
+    flash('PiP 창을 열 수 없었어요');
+    return;
+  }
+  $btnPip.textContent = '⧉ 플로팅 닫기';
+  const d = pipWin.document;
+  d.body.style.cssText = [
+    'margin:0','background:#0b0b12',
+    'display:flex','flex-direction:column',
+    'align-items:center','justify-content:center',
+    'height:100vh','gap:6px',
+    "font-family:'Courier New',system-ui,sans-serif",
+  ].join(';');
+  d.body.innerHTML = `
+    <div id="pt" style="font-size:2.7rem;font-weight:300;color:#e8e4d9;
+      letter-spacing:0.04em;font-variant-numeric:tabular-nums;">
+      ${$display.textContent}
+    </div>
+    <div id="ps" style="font-size:0.6rem;letter-spacing:0.22em;
+      text-transform:uppercase;color:#56536a;">
+      ${$label.textContent}
+    </div>`;
+  pipWin.addEventListener('pagehide', () => {
+    pipWin = null;
+    $btnPip.textContent = '⧉ 플로팅';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// COLOR SETTINGS
+// ═══════════════════════════════════════════════════════════
+const colorDefs = [
+  { id: 'bg',     label: '배경색',     cssVar: '--bg',     def: {r:11,  g:11,  b:18}  },
+  { id: 'accent', label: '링 / 강조색', cssVar: '--accent', def: {r:240, g:165, b:0}   },
+  { id: 'text',   label: '텍스트색',   cssVar: '--text',   def: {r:232, g:228, b:217} },
+];
+let colors = {};
+
+function loadColors() {
+  colorDefs.forEach(d => {
+    try {
+      const raw = localStorage.getItem('col_' + d.id);
+      colors[d.id] = raw ? JSON.parse(raw) : { ...d.def };
+    } catch {
+      colors[d.id] = { ...d.def };
+    }
+  });
+  colorDefs.forEach(d => applyColorVar(d.id));
+}
+
+function saveColor(id) {
+  localStorage.setItem('col_' + id, JSON.stringify(colors[id]));
+}
+
+function applyColorVar(id) {
+  const { r, g, b } = colors[id];
+  const def = colorDefs.find(d => d.id === id);
+  const root = document.documentElement;
+  root.style.setProperty(def.cssVar, `rgb(${r},${g},${b})`);
+
+  if (id === 'bg') {
+    const off = (v, a) => Math.min(255, v + a);
+    root.style.setProperty('--surface',  `rgb(${off(r,9)},${off(g,9)},${off(b,14)})`);
+    root.style.setProperty('--surface2', `rgb(${off(r,18)},${off(g,18)},${off(b,28)})`);
+  }
+  if (id === 'accent') {
+    root.style.setProperty('--accent-glo', `rgba(${r},${g},${b},0.13)`);
+    root.style.setProperty('--accent-dim', `rgb(${Math.floor(r*.67)},${Math.floor(g*.67)},${Math.floor(b*.67)})`);
+  }
+  if (id === 'text') {
+    root.style.setProperty('--text-dim', `rgb(${Math.floor(r*.35)},${Math.floor(g*.35)},${Math.floor(b*.43)})`);
+  }
+}
+
+function updateColor(id, ch, val) {
+  const v = Math.min(255, Math.max(0, parseInt(val) || 0));
+  colors[id][ch] = v;
+  applyColorVar(id);
+  saveColor(id);
+  const sw = document.getElementById('sw-' + id);
+  const { r, g, b } = colors[id];
+  if (sw) sw.style.background = `rgb(${r},${g},${b})`;
+}
+
+function buildColorSettings() {
+  const container = document.getElementById('colorSettings');
+  if (!container) return;
+  container.innerHTML = '';
+  colorDefs.forEach(def => {
+    const { r, g, b } = colors[def.id];
+    const block = document.createElement('div');
+    block.className = 'color-block';
+    block.innerHTML = `
+      <div class="color-block-hdr">
+        <span class="color-name">${def.label}</span>
+        <div class="color-swatch" id="sw-${def.id}" style="background:rgb(${r},${g},${b})"></div>
+      </div>
+      ${['r','g','b'].map(ch => `
+        <div class="rgb-row">
+          <span class="rgb-lbl">${ch.toUpperCase()}</span>
+          <input class="rgb-range" id="sr-${def.id}-${ch}" type="range" min="0" max="255" value="${{r,g,b}[ch]}">
+          <input class="rgb-num"   id="nr-${def.id}-${ch}" type="number"  min="0" max="255" value="${{r,g,b}[ch]}">
+        </div>
+      `).join('')}
+    `;
+    container.appendChild(block);
+    ['r','g','b'].forEach(ch => {
+      const rng = document.getElementById(`sr-${def.id}-${ch}`);
+      const num = document.getElementById(`nr-${def.id}-${ch}`);
+      rng.addEventListener('input', () => {
+        num.value = rng.value;
+        updateColor(def.id, ch, rng.value);
+      });
+      num.addEventListener('input', () => {
+        const v = Math.min(255, Math.max(0, parseInt(num.value) || 0));
+        num.value = v;
+        rng.value = v;
+        updateColor(def.id, ch, v);
+      });
+    });
+  });
+}
+
+function resetColors() {
+  colorDefs.forEach(d => {
+    colors[d.id] = { ...d.def };
+    localStorage.removeItem('col_' + d.id);
+    applyColorVar(d.id);
+  });
+  buildColorSettings();
+}
+
+// ═══════════════════════════════════════════════════════════
+// MUSIC PLAYER
+// ═══════════════════════════════════════════════════════════
+const aud = new Audio();
+let playlist    = [];
+let currTrack   = -1;
+let musicPlaying = false;
+let repeatAll   = false;
+
+aud.addEventListener('ended', () => {
+  if (currTrack < playlist.length - 1) {
+    playTrack(currTrack + 1);
+  } else if (repeatAll) {
+    playTrack(0);
+  } else {
+    musicPlaying = false;
+    updatePlayerUI();
+  }
+});
+
+aud.addEventListener('timeupdate', () => {
+  if (!isNaN(aud.duration) && aud.duration > 0) {
+    document.getElementById('seekBar').value =
+      (aud.currentTime / aud.duration) * 100;
+    document.getElementById('curTime').textContent = fmtT(aud.currentTime);
+    document.getElementById('durTime').textContent = fmtT(aud.duration);
+  }
+});
+
+function fmtT(s) {
+  const m = Math.floor(s / 60);
+  return `${m}:${String(Math.floor(s % 60)).padStart(2,'0')}`;
+}
+
+document.getElementById('mUpload').addEventListener('change', function(e) {
+  Array.from(e.target.files).forEach(file => {
+    playlist.push({ name: file.name, url: URL.createObjectURL(file) });
+  });
+  this.value = '';
+  updateMusicList();
+});
+
+document.getElementById('seekBar').addEventListener('input', function() {
+  if (!isNaN(aud.duration) && aud.duration > 0) {
+    aud.currentTime = (this.value / 100) * aud.duration;
+  }
+});
+
+function playTrack(idx) {
+  if (idx < 0 || idx >= playlist.length) return;
+  currTrack = idx;
+  aud.src   = playlist[idx].url;
+  aud.play()
+    .then(() => { musicPlaying = true; updatePlayerUI(); updateMusicList(); })
+    .catch(() => {});
+}
+
+function togglePlay() {
+  if (playlist.length === 0) return;
+  if (currTrack < 0 || currTrack >= playlist.length) {
+    playTrack(0);
+    return;
+  }
+  if (musicPlaying) {
+    aud.pause();
+    musicPlaying = false;
+  } else {
+    aud.play().then(() => { musicPlaying = true; }).catch(() => {});
+  }
+  updatePlayerUI();
+}
+
+function prevTrack() {
+  if (currTrack > 0) playTrack(currTrack - 1);
+  else if (repeatAll && playlist.length > 0) playTrack(playlist.length - 1);
+}
+
+function nextTrack() {
+  if (currTrack < playlist.length - 1) playTrack(currTrack + 1);
+  else if (repeatAll && playlist.length > 0) playTrack(0);
+}
+
+function toggleRepeat() {
+  repeatAll = !repeatAll;
+  const btn = document.getElementById('btnRepeat');
+  if (btn) btn.textContent = repeatAll ? '🔁 반복 켜짐' : '🔁 반복 꺼짐';
+}
+
+function moveTrack(idx, dir) {
+  const ni = idx + dir;
+  if (ni < 0 || ni >= playlist.length) return;
+  [playlist[idx], playlist[ni]] = [playlist[ni], playlist[idx]];
+  if (currTrack === idx)      currTrack = ni;
+  else if (currTrack === ni)  currTrack = idx;
+  updateMusicList();
+}
+
+function removeTrack(idx) {
+  if (currTrack === idx) {
+    aud.pause();
+    musicPlaying = false;
+    currTrack    = -1;
+  } else if (currTrack > idx) {
+    currTrack--;
+  }
+  URL.revokeObjectURL(playlist[idx].url);
+  playlist.splice(idx, 1);
+  updateMusicList();
+  updatePlayerUI();
+}
+
+function updateMusicList() {
+  const list = document.getElementById('musicList');
+  if (!list) return;
+  if (playlist.length === 0) {
+    list.innerHTML = '<div class="music-empty">파일을 추가하면 여기에 표시돼요.</div>';
+  } else {
+    list.innerHTML = playlist.map((t, i) => `
+      <div class="music-track ${i === currTrack ? 'active' : ''}">
+        <span class="track-num">${i + 1}</span>
+        <span class="track-name" title="${t.name}">${t.name}</span>
+        <div class="track-btns">
+          <button class="track-btn" onclick="moveTrack(${i},-1)"
+            ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button class="track-btn" onclick="moveTrack(${i},1)"
+            ${i === playlist.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="track-btn" onclick="playTrack(${i})" title="재생">▶</button>
+          <button class="track-btn del" onclick="removeTrack(${i})" title="삭제">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  const player = document.getElementById('musicPlayer');
+  if (player) {
+    if (playlist.length > 0) player.classList.add('visible');
+    else player.classList.remove('visible');
+  }
+}
+
+function updatePlayerUI() {
+  const btnPlay  = document.getElementById('btnPlay');
+  const nowPlay  = document.getElementById('nowPlaying');
+  if (btnPlay) btnPlay.textContent = musicPlaying ? '⏸' : '▶';
+  if (nowPlay) {
+    nowPlay.textContent =
+      (currTrack >= 0 && playlist[currTrack])
+        ? playlist[currTrack].name
+        : '트랙 없음';
+  }
+  updateMusicList();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SETTINGS PANEL
+// ═══════════════════════════════════════════════════════════
+function openSettings() {
+  buildColorSettings();
+  updateMusicList();
+  updatePlayerUI();
+  document.getElementById('settingsOv').classList.add('active');
+}
+
+function closeSettings() {
+  document.getElementById('settingsOv').classList.remove('active');
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+loadColors();
+updateMusicList();
+</script>
+</body>
+</html>

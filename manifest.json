@@ -1,0 +1,17 @@
+{
+  "name": "타이머",
+  "short_name": "타이머",
+  "description": "카운트다운 타이머 — 알림, 플로팅 지원",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0b12",
+  "theme_color": "#f0a500",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

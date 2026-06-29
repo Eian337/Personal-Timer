@@ -648,6 +648,70 @@
       letter-spacing: 0.05em;
       color: var(--text-dim);
     }
+
+    /* ── Music dock (bottom) ──────────────────── */
+    body { padding-bottom: 72px; }
+
+    .music-dock {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-bottom: none;
+      border-radius: 14px 14px 0 0;
+      box-shadow: 0 -8px 24px rgba(0,0,0,0.28);
+      z-index: 120;
+    }
+
+    .music-dock-hdr {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .md-icon { font-size: 0.9rem; }
+    .md-title {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      color: var(--text);
+      flex: 1;
+    }
+    .md-count {
+      font-size: 0.64rem;
+      color: var(--text-dim);
+      letter-spacing: 0.03em;
+    }
+    .md-chevron { color: var(--text-dim); transition: transform 0.22s ease; flex-shrink: 0; }
+    .music-dock.open .md-chevron { transform: rotate(180deg); }
+
+    .music-dock-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.26s ease;
+    }
+    .music-dock.open .music-dock-body {
+      max-height: 62vh;
+      overflow-y: auto;
+    }
+
+    .music-dock-inner {
+      padding: 4px 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .music-hint {
+      font-size: 0.66rem;
+      line-height: 1.5;
+      color: var(--text-dim);
+    }
   </style>
 </head>
 <body>
@@ -731,45 +795,45 @@
       <span class="settings-hdr-title">설정</span>
       <button class="settings-close" onclick="closeSettings()">×</button>
     </div>
-    <div class="settings-tabs">
-      <button class="settings-tab active" id="tabbtn-color" onclick="switchTab('color')">색상</button>
-      <button class="settings-tab" id="tabbtn-music" onclick="switchTab('music')">음악</button>
-    </div>
     <div class="settings-body">
+      <div class="sect-label">테마 프리셋</div>
+      <div class="theme-row" id="themeRow"></div>
+      <div class="sect-label">직접 조정</div>
+      <div class="color-section" id="colorSettings"></div>
+      <button class="color-reset-btn" onclick="resetColors()" style="margin-top:12px">기본값으로 초기화</button>
+    </div>
+  </div>
+</div>
 
-      <div class="tab-panel active" id="tab-color">
-        <div class="sect-label">테마 프리셋</div>
-        <div class="theme-row" id="themeRow"></div>
-        <div class="sect-label">직접 조정</div>
-        <div class="color-section" id="colorSettings"></div>
-        <button class="color-reset-btn" onclick="resetColors()" style="margin-top:12px">기본값으로 초기화</button>
+<div class="music-dock" id="musicDock">
+  <div class="music-dock-hdr" onclick="toggleMusicDock()">
+    <span class="md-icon">🎵</span>
+    <span class="md-title">알람 음악</span>
+    <span class="md-count" id="mdCount">기본 알림음</span>
+    <svg class="md-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+  </div>
+  <div class="music-dock-body">
+    <div class="music-dock-inner">
+      <div class="music-hint">설정한 음악이 타이머 종료 시 재생됩니다. 비워두면 기본 알림음이 울려요.</div>
+      <div class="music-toolbar">
+        <button class="btn-text" onclick="document.getElementById('mUpload').click()">+ 파일 추가</button>
+        <input type="file" id="mUpload" multiple accept="audio/*" style="display:none">
+        <button class="btn-text" id="btnRepeat" onclick="toggleRepeat()">🔁 반복 꺼짐</button>
       </div>
-
-      <div class="tab-panel" id="tab-music">
-        <div class="sect-label">알람 음악 <span style="font-weight:300;letter-spacing:0.05em;text-transform:none;font-size:0.9em;opacity:0.7">— 없으면 기본 알림음 재생</span></div>
-        <div class="music-toolbar">
-          <button class="btn-text" onclick="document.getElementById('mUpload').click()">+ 파일 추가</button>
-          <input type="file" id="mUpload" multiple accept="audio/*" style="display:none">
-          <button class="btn-text" id="btnRepeat" onclick="toggleRepeat()">🔁 반복 꺼짐</button>
+      <div id="musicList" class="music-list"></div>
+      <div id="musicPlayer" class="music-player">
+        <div class="player-btns">
+          <button class="btn-circle btn-sm" onclick="prevTrack()" title="이전">⏮</button>
+          <button class="btn-circle btn-main btn-play-sm" id="btnPlay" onclick="togglePlay()">▶</button>
+          <button class="btn-circle btn-sm" onclick="nextTrack()" title="다음">⏭</button>
         </div>
-        <div style="height:10px"></div>
-        <div id="musicList" class="music-list"></div>
-        <div style="height:10px"></div>
-        <div id="musicPlayer" class="music-player">
-          <div class="player-btns">
-            <button class="btn-circle btn-sm" onclick="prevTrack()" title="이전">⏮</button>
-            <button class="btn-circle btn-main btn-play-sm" id="btnPlay" onclick="togglePlay()">▶</button>
-            <button class="btn-circle btn-sm" onclick="nextTrack()" title="다음">⏭</button>
-          </div>
-          <div class="now-playing" id="nowPlaying">트랙 없음</div>
-          <input type="range" id="seekBar" class="seek-bar" min="0" max="100" value="0">
-          <div class="time-row">
-            <span id="curTime">0:00</span>
-            <span id="durTime">0:00</span>
-          </div>
+        <div class="now-playing" id="nowPlaying">트랙 없음</div>
+        <input type="range" id="seekBar" class="seek-bar" min="0" max="100" value="0">
+        <div class="time-row">
+          <span id="curTime">0:00</span>
+          <span id="durTime">0:00</span>
         </div>
       </div>
-
     </div>
   </div>
 </div>
@@ -1344,13 +1408,8 @@ function buildThemes() {
 }
 
 // ── 설정 탭 전환
-function switchTab(name) {
-  ['color', 'music'].forEach(n => {
-    const panel = document.getElementById('tab-' + n);
-    const btn   = document.getElementById('tabbtn-' + n);
-    if (panel) panel.classList.toggle('active', n === name);
-    if (btn)   btn.classList.toggle('active', n === name);
-  });
+function toggleMusicDock() {
+  document.getElementById('musicDock').classList.toggle('open');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1490,6 +1549,8 @@ function updateMusicList() {
     if (playlist.length > 0) player.classList.add('visible');
     else player.classList.remove('visible');
   }
+  const count = document.getElementById('mdCount');
+  if (count) count.textContent = playlist.length > 0 ? `${playlist.length}곡` : '기본 알림음';
 }
 
 function updatePlayerUI() {
@@ -1511,8 +1572,6 @@ function updatePlayerUI() {
 function openSettings() {
   buildThemes();
   buildColorSettings();
-  updateMusicList();
-  updatePlayerUI();
   document.getElementById('settingsOv').classList.add('active');
 }
 

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<button id="b" style="font-size:20px;padding:12px">폴더 선택하고 쓰기 테스트</button>
+<pre id="log" style="font-size:16px;white-space:pre-wrap"></pre>
+<script>
+const log = m => document.getElementById('log').textContent += m + '\n';
+log('showDirectoryPicker 존재: ' + ('showDirectoryPicker' in window));
+log('navigator.storage.persist 존재: ' + !!(navigator.storage && navigator.storage.persist));
+document.getElementById('b').onclick = async () => {
+  try {
+    const dir = await showDirectoryPicker({ mode: 'readwrite' });
+    const fh = await dir.getFileHandle('fstest.txt', { create: true });
+    const w = await fh.createWritable();
+    await w.write('hello ' + new Date().toISOString());
+    await w.close();
+    log('쓰기 성공 → 파일 앱에서 fstest.txt 확인해보세요');
+    const persisted = await navigator.storage.persist();
+    log('영구 저장소 승인: ' + persisted);
+    const est = await navigator.storage.estimate();
+    log('사용 가능 용량(대략): ' + Math.round(est.quota / 1048576) + ' MB');
+  } catch (e) {
+    log('실패: ' + e.name + ' — ' + e.message);
+  }
+};
+</script>
